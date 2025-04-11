@@ -1,0 +1,7 @@
+{
+    "DEFAULT_ADIF_FILE" : "wsjtx_log.adi",
+    "OUTPUT_DIRECTORY" : "maps",
+    "GOOGLE_MAPS_API_KEY" : "",
+    "DEFAULT_MAP_TYPE" : "HYBRID",
+    "AUTO_OPEN_MAP" : true
+}
