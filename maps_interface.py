@@ -25,17 +25,22 @@ def create_map(contacts, settings):
     html_file = os.path.join(output_dir, f"ham_contacts_map_{timestamp}.html")
     
     # Find operator's grid square from contacts
-    operator_grid = None
+    operator_grid = settings.OPERATOR_GRIDSQUARE
     operator_lat = None
     operator_lon = None
     
-    # Look for MY_GRIDSQUARE in contacts
-    for contact in contacts:
-        if 'MY_GRIDSQUARE' in contact and contact['MY_GRIDSQUARE'].strip():
-            from grid_converter import grid_to_coordinates
-            operator_grid = contact['MY_GRIDSQUARE'].strip()
-            operator_lat, operator_lon = grid_to_coordinates(operator_grid)
-            break
+    # Look for MY_GRIDSQUARE in contacts if not in settings
+    if not operator_grid:
+        for contact in contacts:
+            if 'MY_GRIDSQUARE' in contact and contact['MY_GRIDSQUARE'].strip():
+                from grid_converter import grid_to_coordinates
+                operator_grid = contact['MY_GRIDSQUARE'].strip()
+                operator_lat, operator_lon = grid_to_coordinates(operator_grid)
+                break
+    else:
+        # Convert operator grid from settings
+        from grid_converter import grid_to_coordinates
+        operator_lat, operator_lon = grid_to_coordinates(operator_grid)
     
     # Start building the HTML content
     html_content = f"""<!DOCTYPE html>
@@ -73,9 +78,23 @@ def create_map(contacts, settings):
         }}
         .operator-marker {{
             color: blue;
+            font-size: 20px;
+            display: inline-block;
+            margin-right: 5px;
         }}
         .contact-marker {{
             color: red;
+            font-size: 20px;
+            display: inline-block;
+            margin-right: 5px;
+        }}
+        .path-line {{
+            background-color: green;
+            height: 3px;
+            width: 20px;
+            display: inline-block;
+            margin-right: 5px;
+            vertical-align: middle;
         }}
     </style>
 </head>
@@ -84,6 +103,8 @@ def create_map(contacts, settings):
     <div class="legend">
         <div><span class="operator-marker">●</span> Your location</div>
         <div><span class="contact-marker">●</span> Contact locations</div>
+        <div><span class="path-line"></span> Path</div>
+        <div id="contact-count">Contacts: ${len(contacts)}</div>
     </div>
     <script>
         function initMap() {{
@@ -95,6 +116,8 @@ def create_map(contacts, settings):
             
             const infoWindow = new google.maps.InfoWindow();
             const bounds = new google.maps.LatLngBounds();
+            let markersArray = [];
+            let pathsArray = [];
 """
     
     # Add operator marker if grid square is available
@@ -117,6 +140,7 @@ def create_map(contacts, settings):
             }});
             
             bounds.extend(operatorPosition);
+            markersArray.push(operatorMarker);
             
             operatorMarker.addListener("click", () => {{
                 infoWindow.setContent(
@@ -130,107 +154,117 @@ def create_map(contacts, settings):
             }});
 """
     
-    # Add each contact as a marker
+    # Add contact markers directly
     html_content += """
-            // Create markers for each contact
-            const contacts = [
+            // Create all contact markers
 """
     
-    for contact in contacts:
+    # Now we'll add each contact marker directly in the JavaScript
+    for i, contact in enumerate(contacts):
+        if 'LATITUDE' not in contact or 'LONGITUDE' not in contact:
+            continue
+            
         lat = contact.get('LATITUDE')
         lng = contact.get('LONGITUDE')
-        
-        if not lat or not lng:
-            continue
+        call = contact.get('CALL', 'Unknown').replace('"', '\\"')  # Escape any quotes
         
         # Build a description with available information
-        info = []
+        info_parts = []
         if 'CALL' in contact:
-            info.append(f"Callsign: {contact['CALL']}")
+            info_parts.append(f"Callsign: {contact['CALL']}")
         if 'NAME' in contact:
-            info.append(f"Name: {contact['NAME']}")
+            info_parts.append(f"Name: {contact['NAME']}")
         if 'QSO_DATE' in contact:
             date = contact['QSO_DATE']
             if len(date) == 8:  # YYYYMMDD format
                 formatted_date = f"{date[0:4]}-{date[4:6]}-{date[6:8]}"
-                info.append(f"Date: {formatted_date}")
+                info_parts.append(f"Date: {formatted_date}")
         if 'TIME_ON' in contact:
             time = contact['TIME_ON']
             if len(time) >= 4:  # HHMM format
                 formatted_time = f"{time[0:2]}:{time[2:4]}"
-                info.append(f"Time: {formatted_time}")
+                info_parts.append(f"Time: {formatted_time}")
         if 'BAND' in contact:
-            info.append(f"Band: {contact['BAND']}")
+            info_parts.append(f"Band: {contact['BAND']}")
         if 'MODE' in contact:
-            info.append(f"Mode: {contact['MODE']}")
+            info_parts.append(f"Mode: {contact['MODE']}")
         if 'GRIDSQUARE' in contact:
-            info.append(f"Grid: {contact['GRIDSQUARE']}")
+            info_parts.append(f"Grid: {contact['GRIDSQUARE']}")
         
-        description = ", ".join(info)
+        description = ", ".join(info_parts).replace('"', '\\"')  # Escape any quotes
         
-        # Add the marker to the HTML
-        html_content += f"""                {{
-                    position: {{ lat: {lat}, lng: {lng} }},
-                    title: "{contact.get('CALL', 'Unknown')}",
-                    description: "{description}"
-                }},
-"""
-    
-    # Close the contacts array and add marker creation code
-    html_content += """            ];
+        # Add marker for this contact
+        html_content += f"""
+            // Contact {i+1}: {call}
+            const contact{i} = new google.maps.Marker({{
+                position: {{ lat: {lat}, lng: {lng} }},
+                map: map,
+                title: "{call}",
+                icon: {{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 5,
+                    fillColor: "#F44336",
+                    fillOpacity: 0.8,
+                    strokeWeight: 2,
+                    strokeColor: "#B71C1C"
+                }}
+            }});
             
-            // Create markers for all contacts
-            contacts.forEach(contact => {
-                const marker = new google.maps.Marker({
-                    position: contact.position,
-                    map: map,
-                    title: contact.title,
-                    icon: {
-                        path: google.maps.SymbolPath.CIRCLE,
-                        scale: 5,
-                        fillColor: "#F44336",
-                        fillOpacity: 0.8,
-                        strokeWeight: 2,
-                        strokeColor: "#B71C1C"
-                    }
-                });
-                
-                bounds.extend(contact.position);
-                
-                marker.addListener("click", () => {
-                    infoWindow.setContent(
-                        `<div class="info-window">
-                            <h3>${contact.title}</h3>
-                            <p>${contact.description}</p>
-                        </div>`
-                    );
-                    infoWindow.open(map, marker);
-                });
-"""
-    
-    # Add paths from operator to contacts if operator grid is available
-    if operator_lat and operator_lon:
-        html_content += """
-                // Create path from operator to this contact
-                if (operatorPosition) {
-                    const path = new google.maps.Polyline({
-                        path: [operatorPosition, contact.position],
-                        geodesic: true,
-                        strokeColor: "#4CAF50",
-                        strokeOpacity: 0.6,
-                        strokeWeight: 2
-                    });
-                    path.setMap(map);
-                }
-"""
-    
-    # Close forEach loop and add final code
-    html_content += """            });
+            bounds.extend({{ lat: {lat}, lng: {lng} }});
+            markersArray.push(contact{i});
             
+            contact{i}.addListener("click", () => {{
+                infoWindow.setContent(
+                    `<div class="info-window">
+                        <h3>{call}</h3>
+                        <p>{description}</p>
+                    </div>`
+                );
+                infoWindow.open(map, contact{i});
+            }});
+"""
+        
+        # Add path from operator to this contact if operator location is available
+        if operator_lat and operator_lon:
+            html_content += f"""
+            // Draw path to contact {i+1}
+            const path{i} = new google.maps.Polyline({{
+                path: [
+                    {{ lat: {operator_lat}, lng: {operator_lon} }},
+                    {{ lat: {lat}, lng: {lng} }}
+                ],
+                geodesic: true,
+                strokeColor: "#4CAF50",
+                strokeOpacity: 0.6,
+                strokeWeight: 2
+            }});
+            path{i}.setMap(map);
+            pathsArray.push(path{i});
+"""
+    
+    # Add final JavaScript to fit bounds and control marker visibility
+    html_content += """
             // Adjust the map to fit all markers
-            if (bounds.isEmpty() === false) {
+            if (markersArray.length > 0) {
                 map.fitBounds(bounds);
             }
+            
+            // Add a listener to update marker visibility when the map changes
+            map.addListener("bounds_changed", () => {
+                const mapBounds = map.getBounds();
+                let visibleCount = 0;
+                
+                if (mapBounds) {
+                    markersArray.forEach(marker => {
+                        if (mapBounds.contains(marker.getPosition())) {
+                            visibleCount++;
+                        }
+                    });
+                    
+                    // Update the contact count in the legend
+                    document.getElementById("contact-count").textContent = `Contacts: ${visibleCount} visible of ${markersArray.length} total`;
+                }
+            });
         }
     </script>
     <script async defer

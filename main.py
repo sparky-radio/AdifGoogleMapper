@@ -47,41 +47,44 @@ def main():
                 operator_grid = contact['MY_GRIDSQUARE'].strip()
                 break
     
-    # If we found the operator's grid, add it to all contacts for consistency
     if operator_grid:
-        for contact in contacts:
-            if 'MY_GRIDSQUARE' not in contact or not contact['MY_GRIDSQUARE'].strip():
-                contact['MY_GRIDSQUARE'] = operator_grid
+        print(f"Using operator grid square: {operator_grid}")
+    else:
+        print("Warning: Operator grid square not found. Paths between contacts will not be displayed.")
     
-    # Convert grid squares to coordinates
+    # Convert grid squares to coordinates for all contacts
+    valid_contacts = []
+    
     for contact in contacts:
+        # Copy the contact to avoid modifying the original
+        processed_contact = contact.copy()
+        
         # Convert contact's grid square
-        if 'GRIDSQUARE' in contact and contact['GRIDSQUARE'].strip():
-            grid = contact['GRIDSQUARE']
+        if 'GRIDSQUARE' in processed_contact and processed_contact['GRIDSQUARE'].strip():
+            grid = processed_contact['GRIDSQUARE'].strip()
             lat, lon = grid_to_coordinates(grid)
             if lat is not None and lon is not None:
-                contact['LATITUDE'] = lat
-                contact['LONGITUDE'] = lon
-        
-        # Convert operator's grid square
-        if 'MY_GRIDSQUARE' in contact and contact['MY_GRIDSQUARE'].strip():
-            my_grid = contact['MY_GRIDSQUARE']
-            my_lat, my_lon = grid_to_coordinates(my_grid)
-            if my_lat is not None and my_lon is not None:
-                contact['MY_LATITUDE'] = my_lat
-                contact['MY_LONGITUDE'] = my_lon
+                processed_contact['LATITUDE'] = lat
+                processed_contact['LONGITUDE'] = lon
+                valid_contacts.append(processed_contact)
+            else:
+                print(f"Warning: Invalid grid square '{grid}' for contact {processed_contact.get('CALL', 'Unknown')}")
+        else:
+            print(f"Warning: No grid square found for contact {processed_contact.get('CALL', 'Unknown')}")
     
-    # Filter only contacts with coordinates
-    mapped_contacts = [c for c in contacts if 'LATITUDE' in c and 'LONGITUDE' in c]
-    
-    if not mapped_contacts:
-        print("No contacts with valid grid squares found.")
+    if not valid_contacts:
+        print("Error: No contacts with valid grid squares found.")
         return
     
-    print(f"Mapping {len(mapped_contacts)} contacts with valid coordinates")
+    # Make sure operator grid is also included
+    if operator_grid:
+        for contact in valid_contacts:
+            contact['MY_GRIDSQUARE'] = operator_grid
+    
+    print(f"Successfully processed {len(valid_contacts)} contacts with valid coordinates")
     
     # Create and display the map
-    html_file = create_map(mapped_contacts, settings)
+    html_file = create_map(valid_contacts, settings)
     
     print(f"Map created: {html_file}")
     print(f"Open {html_file} in your web browser to view your contacts")

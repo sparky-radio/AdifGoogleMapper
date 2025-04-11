@@ -40,15 +40,16 @@ def parse_adif_file(filename):
             # If we hit an EOR (End Of Record), save the contact and start a new one
             if field_name == 'EOR':
                 if current_contact:  # Only append if we have data
-                    contacts.append(current_contact)
+                    contacts.append(current_contact.copy())  # Make a copy to avoid reference issues
                 current_contact = {}
             else:
                 current_contact[field_name] = field_value
         
         # Add the last contact if it exists and wasn't terminated with EOR
         if current_contact:
-            contacts.append(current_contact)
+            contacts.append(current_contact.copy())
         
+        print(f"Successfully parsed {len(contacts)} contacts from ADIF file")
         return contacts
     
     except Exception as e:
