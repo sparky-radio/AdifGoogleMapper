@@ -1,12 +1,13 @@
 # Ham Radio Contact Mapper
 
 ## Overview
-This Python program maps amateur radio contacts from ADIF (Amateur Data Interchange Format) files to Google Maps. It translates Maidenhead grid square coordinates to latitude and longitude coordinates that can be used with the Google Maps API.
+This Python program maps amateur radio contacts from ADIF (Amateur Data Interchange Format) files to Google Maps. It translates Maidenhead grid square coordinates to latitude and longitude coordinates that can be used with the Google Maps API. The program also displays paths between your location and each contact.
 
 ## Features
 - Parse ADIF files containing ham radio contacts
 - Convert Maidenhead grid squares to latitude/longitude coordinates
 - Create interactive Google Maps with contact markers
+- Display paths between your location and each contact
 - View contact details by clicking on markers
 - Modular design with separate files for different functionality
 - Configurable settings via JSON file
@@ -63,7 +64,8 @@ Create a `settings.json` file in the same directory as the application files wit
     "OUTPUT_DIRECTORY": "maps",
     "GOOGLE_MAPS_API_KEY": "YOUR_API_KEY_HERE",
     "DEFAULT_MAP_TYPE": "HYBRID",
-    "AUTO_OPEN_MAP": true
+    "AUTO_OPEN_MAP": true,
+    "OPERATOR_GRIDSQUARE": "FN31pr"
 }
 ```
 
@@ -73,6 +75,7 @@ Configuration options:
 - `GOOGLE_MAPS_API_KEY`: Your Google Maps API key
 - `DEFAULT_MAP_TYPE`: Map type to display (ROADMAP, SATELLITE, HYBRID, or TERRAIN)
 - `AUTO_OPEN_MAP`: Whether to automatically open maps in browser
+- `OPERATOR_GRIDSQUARE`: Your grid square location (optional, will look for MY_GRIDSQUARE in ADIF file if not specified)
 
 ## Usage
 
@@ -88,13 +91,28 @@ If no ADIF file is specified, the program will use the default file specified in
 
 ADIF (Amateur Data Interchange Format) is a standard format for exchanging amateur radio contact information. Most ham radio logging software can export logs in ADIF format.
 
+The program looks for the following fields in the ADIF file:
+- `CALL`: Callsign of the contact
+- `NAME`: Name of the contact
+- `QSO_DATE`: Date of the contact
+- `TIME_ON`: Time of the contact
+- `BAND`: Frequency band
+- `MODE`: Contact mode (e.g., SSB, FT8, CW)
+- `GRIDSQUARE`: Grid square of the contact
+- `MY_GRIDSQUARE`: Your grid square
+
 ## About Maidenhead Grid System
 
 The Maidenhead Locator System (also known as grid squares or grid locators) is a geographic coordinate system used by amateur radio operators. It divides the world into grid squares with a combination of letters and numbers, such as "FM18lw".
 
 ## Output
 
-The program generates an HTML file with Google Maps displaying markers for each contact. Clicking on a marker shows details such as:
+The program generates an HTML file with Google Maps displaying:
+- A marker for your location (blue circle)
+- Markers for each contact (red circles)
+- Paths connecting your location to each contact (green lines)
+
+Clicking on a marker shows details such as:
 - Callsign
 - Name (if available)
 - Date and time of contact
@@ -107,3 +125,4 @@ The generated HTML file will be saved in the specified output directory.
 
 - Google Maps Platform offers a $200 monthly credit, which is enough for most personal projects
 - Usage beyond the free credit will incur charges, so restrict your API key appropriately
+- If your ADIF file doesn't contain the `MY_GRIDSQUARE` field, you can set your grid square in the settings file
