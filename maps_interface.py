@@ -1,6 +1,6 @@
 # maps_interface.py
 """
-Module for interfacing with Google Maps API to display contacts
+Module for interfacing with Google Maps API to display contacts and paths
 """
 
 import os
@@ -9,7 +9,7 @@ from datetime import datetime
 
 def create_map(contacts, settings):
     """
-    Create an HTML file with Google Maps displaying the contacts
+    Create an HTML file with Google Maps displaying the contacts and paths
     
     Args:
         contacts (list): List of contacts with lat/long coordinates
@@ -23,6 +23,19 @@ def create_map(contacts, settings):
     output_dir = settings.OUTPUT_DIRECTORY
     os.makedirs(output_dir, exist_ok=True)
     html_file = os.path.join(output_dir, f"ham_contacts_map_{timestamp}.html")
+    
+    # Find operator's grid square from contacts
+    operator_grid = None
+    operator_lat = None
+    operator_lon = None
+    
+    # Look for MY_GRIDSQUARE in contacts
+    for contact in contacts:
+        if 'MY_GRIDSQUARE' in contact and contact['MY_GRIDSQUARE'].strip():
+            from grid_converter import grid_to_coordinates
+            operator_grid = contact['MY_GRIDSQUARE'].strip()
+            operator_lat, operator_lon = grid_to_coordinates(operator_grid)
+            break
     
     # Start building the HTML content
     html_content = f"""<!DOCTYPE html>
@@ -47,10 +60,31 @@ def create_map(contacts, settings):
         .info-window {{
             max-width: 300px;
         }}
+        .legend {{
+            background: white;
+            padding: 10px;
+            margin: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            z-index: 1000;
+        }}
+        .operator-marker {{
+            color: blue;
+        }}
+        .contact-marker {{
+            color: red;
+        }}
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div class="legend">
+        <div><span class="operator-marker">●</span> Your location</div>
+        <div><span class="contact-marker">●</span> Contact locations</div>
+    </div>
     <script>
         function initMap() {{
             const map = new google.maps.Map(document.getElementById("map"), {{
@@ -61,12 +95,47 @@ def create_map(contacts, settings):
             
             const infoWindow = new google.maps.InfoWindow();
             const bounds = new google.maps.LatLngBounds();
+"""
+    
+    # Add operator marker if grid square is available
+    if operator_lat and operator_lon:
+        html_content += f"""
+            // Add operator's location marker
+            const operatorPosition = {{ lat: {operator_lat}, lng: {operator_lon} }};
+            const operatorMarker = new google.maps.Marker({{
+                position: operatorPosition,
+                map: map,
+                title: "Your Location ({operator_grid})",
+                icon: {{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 7,
+                    fillColor: "#2196F3",
+                    fillOpacity: 0.8,
+                    strokeWeight: 2,
+                    strokeColor: "#0b47a1"
+                }}
+            }});
             
+            bounds.extend(operatorPosition);
+            
+            operatorMarker.addListener("click", () => {{
+                infoWindow.setContent(
+                    `<div class="info-window">
+                        <h3>Your Location</h3>
+                        <p>Grid Square: {operator_grid}</p>
+                        <p>Coordinates: {operator_lat}, {operator_lon}</p>
+                    </div>`
+                );
+                infoWindow.open(map, operatorMarker);
+            }});
+"""
+    
+    # Add each contact as a marker
+    html_content += """
             // Create markers for each contact
             const contacts = [
 """
     
-    # Add each contact as a marker
     for contact in contacts:
         lat = contact.get('LATITUDE')
         lng = contact.get('LONGITUDE')
@@ -107,14 +176,23 @@ def create_map(contacts, settings):
                 }},
 """
     
-    # Close the contacts array and add the rest of the JavaScript
+    # Close the contacts array and add marker creation code
     html_content += """            ];
             
+            // Create markers for all contacts
             contacts.forEach(contact => {
                 const marker = new google.maps.Marker({
                     position: contact.position,
                     map: map,
-                    title: contact.title
+                    title: contact.title,
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 5,
+                        fillColor: "#F44336",
+                        fillOpacity: 0.8,
+                        strokeWeight: 2,
+                        strokeColor: "#B71C1C"
+                    }
                 });
                 
                 bounds.extend(contact.position);
@@ -128,10 +206,29 @@ def create_map(contacts, settings):
                     );
                     infoWindow.open(map, marker);
                 });
-            });
+"""
+    
+    # Add paths from operator to contacts if operator grid is available
+    if operator_lat and operator_lon:
+        html_content += """
+                // Create path from operator to this contact
+                if (operatorPosition) {
+                    const path = new google.maps.Polyline({
+                        path: [operatorPosition, contact.position],
+                        geodesic: true,
+                        strokeColor: "#4CAF50",
+                        strokeOpacity: 0.6,
+                        strokeWeight: 2
+                    });
+                    path.setMap(map);
+                }
+"""
+    
+    # Close forEach loop and add final code
+    html_content += """            });
             
             // Adjust the map to fit all markers
-            if (contacts.length > 0) {
+            if (bounds.isEmpty() === false) {
                 map.fitBounds(bounds);
             }
         }

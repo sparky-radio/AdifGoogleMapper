@@ -37,13 +37,39 @@ def main():
     
     print(f"Found {len(contacts)} contacts")
     
+    # Find operator's grid square if not already in contacts
+    operator_grid = settings.OPERATOR_GRIDSQUARE
+    
+    # If operator grid is not in settings, look for it in contacts
+    if not operator_grid:
+        for contact in contacts:
+            if 'MY_GRIDSQUARE' in contact and contact['MY_GRIDSQUARE'].strip():
+                operator_grid = contact['MY_GRIDSQUARE'].strip()
+                break
+    
+    # If we found the operator's grid, add it to all contacts for consistency
+    if operator_grid:
+        for contact in contacts:
+            if 'MY_GRIDSQUARE' not in contact or not contact['MY_GRIDSQUARE'].strip():
+                contact['MY_GRIDSQUARE'] = operator_grid
+    
     # Convert grid squares to coordinates
     for contact in contacts:
-        if 'GRIDSQUARE' in contact:
+        # Convert contact's grid square
+        if 'GRIDSQUARE' in contact and contact['GRIDSQUARE'].strip():
             grid = contact['GRIDSQUARE']
             lat, lon = grid_to_coordinates(grid)
-            contact['LATITUDE'] = lat
-            contact['LONGITUDE'] = lon
+            if lat is not None and lon is not None:
+                contact['LATITUDE'] = lat
+                contact['LONGITUDE'] = lon
+        
+        # Convert operator's grid square
+        if 'MY_GRIDSQUARE' in contact and contact['MY_GRIDSQUARE'].strip():
+            my_grid = contact['MY_GRIDSQUARE']
+            my_lat, my_lon = grid_to_coordinates(my_grid)
+            if my_lat is not None and my_lon is not None:
+                contact['MY_LATITUDE'] = my_lat
+                contact['MY_LONGITUDE'] = my_lon
     
     # Filter only contacts with coordinates
     mapped_contacts = [c for c in contacts if 'LATITUDE' in c and 'LONGITUDE' in c]

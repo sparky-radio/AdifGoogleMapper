@@ -18,6 +18,7 @@ class Settings:
         self.GOOGLE_MAPS_API_KEY = ""  # This should be provided by the user
         self.DEFAULT_MAP_TYPE = "HYBRID"  # ROADMAP, SATELLITE, HYBRID, or TERRAIN
         self.AUTO_OPEN_MAP = True
+        self.OPERATOR_GRIDSQUARE = ""  # Optional: can be set if not found in ADIF
         
         # Load settings from file if it exists
         self.load_settings()
@@ -51,7 +52,8 @@ class Settings:
                 "OUTPUT_DIRECTORY": self.OUTPUT_DIRECTORY,
                 "GOOGLE_MAPS_API_KEY": self.GOOGLE_MAPS_API_KEY,
                 "DEFAULT_MAP_TYPE": self.DEFAULT_MAP_TYPE,
-                "AUTO_OPEN_MAP": self.AUTO_OPEN_MAP
+                "AUTO_OPEN_MAP": self.AUTO_OPEN_MAP,
+                "OPERATOR_GRIDSQUARE": self.OPERATOR_GRIDSQUARE
             }
             
             # Write to file
