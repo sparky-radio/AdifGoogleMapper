@@ -90,10 +90,15 @@ Configuration options:
 Run the program by executing the main.py file:
 
 ```
-python main.py [path_to_adif_file]
-```
+usage: main.py [-h] [--adi ADI] [--start START] [--end END]
 
-If no ADIF file is specified, the program will use the default file specified in settings.
+options:
+  -h, --help     show this help message and exit
+  --adi ADI      the ADI file name and location
+  --start START  the start date Y-M-D
+  --end END      the end date Y-M-D
+```
+The ADIF file and location are required.  The date parameters are optional.  
 
 ## About ADIF Format
 
