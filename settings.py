@@ -22,6 +22,9 @@ class Settings:
         
         # Load settings from file if it exists
         self.load_settings()
+        self.start_date = None
+        self.end_date = None
+        self.band = None
     
     def load_settings(self):
         """Load settings from settings.json file if it exists"""

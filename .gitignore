@@ -3,3 +3,4 @@ settings.json
 ALL_WSPR.TXT
 maps
 __pycache__
+.vscode

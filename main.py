@@ -3,6 +3,8 @@
 Ham Radio Contact Mapper
 Main program file that runs the application
 """
+import argparse
+import datetime
 
 import sys
 import os
@@ -13,12 +15,31 @@ from settings import Settings
 
 def main():
     """Main entry point for the application"""
+
+    parser = argparse.ArgumentParser()
+    try:
+        parser.add_argument("--adi", help="the ADI file name and location")
+        parser.add_argument("--start", type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(), help="the start date Y-M-D")
+        parser.add_argument("--end", type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(), help="the end date Y-M-D")
+        # parser.add_argument("--band", help="the band: all, 10,12,15,20,30...")
+        args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
+        
+    except: # calling help will call SystemExit, we can catch this instead
+        parser.print_help
+        sys.exit(0)
     
     settings = Settings()
     
+    if args.start:
+        settings.start_date = args.start
+
+    if args.end:
+        settings.end_date = args.end
+
+    
     # Check if adif file is provided as argument
-    if len(sys.argv) > 1:
-        adif_file = sys.argv[1]
+    if args.adi:
+        adif_file = args.adi
     else:
         adif_file = settings.DEFAULT_ADIF_FILE
     
@@ -29,7 +50,7 @@ def main():
     print(f"Processing ADIF file: {adif_file}")
     
     # Parse the ADIF file
-    contacts = parse_adif_file(adif_file)
+    contacts = parse_adif_file(adif_file, settings)
     
     if not contacts:
         print("No contacts found in the ADIF file.")
