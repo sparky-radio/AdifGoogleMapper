@@ -7,6 +7,7 @@ import os
 import webbrowser
 from datetime import datetime
 from collections import defaultdict
+from band_colors import BAND_COLORS
 
 def create_map(contacts, settings):
     """
@@ -242,7 +243,7 @@ def create_map(contacts, settings):
         
         marker_title = f"{first_call} ({contact_count} contact{'s' if contact_count > 1 else ''})"
         combined_info = "".join(info_window_content).replace('\\', '\\\\').replace('`', '\\`')
-        
+        band_color = BAND_COLORS[contact['BAND']]
         # Add marker for this location with info about all contacts
         html_content += f"""
             // Location {i+1} with {contact_count} contact(s)
@@ -253,10 +254,10 @@ def create_map(contacts, settings):
                 icon: {{
                     path: google.maps.SymbolPath.CIRCLE,
                     scale: 5,
-                    fillColor: "#F44336",
+                    fillColor: "{band_color}",
                     fillOpacity: 0.8,
                     strokeWeight: 2,
-                    strokeColor: "#B71C1C"
+                    strokeColor: "{band_color}"
                 }},
                 contactCount: {contact_count}
             }});
@@ -285,7 +286,7 @@ def create_map(contacts, settings):
                     {{ lat: {lat}, lng: {lng} }}
                 ],
                 geodesic: true,
-                strokeColor: "#4CAF50",
+                strokeColor: "{band_color}",
                 strokeOpacity: 0.6,
                 strokeWeight: 2
             }});
