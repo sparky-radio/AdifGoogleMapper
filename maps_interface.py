@@ -7,7 +7,8 @@ import os
 import webbrowser
 from datetime import datetime
 from collections import defaultdict
-from band_colors import BAND_COLORS
+from utils import BAND_COLORS
+from grid_converter import grid_to_coordinates
 
 def create_map(contacts, settings):
     """
@@ -35,13 +36,11 @@ def create_map(contacts, settings):
     if not operator_grid:
         for contact in contacts:
             if 'MY_GRIDSQUARE' in contact and contact['MY_GRIDSQUARE'].strip():
-                from grid_converter import grid_to_coordinates
                 operator_grid = contact['MY_GRIDSQUARE'].strip()
                 operator_lat, operator_lon = grid_to_coordinates(operator_grid)
                 break
     else:
         # Convert operator grid from settings
-        from grid_converter import grid_to_coordinates
         operator_lat, operator_lon = grid_to_coordinates(operator_grid)
     
     # Format date range for display if available

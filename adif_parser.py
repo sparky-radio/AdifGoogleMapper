@@ -7,7 +7,7 @@ import re
 from datetime import datetime
 from settings import Settings
 
-def parse_adif_file(filename, settings):
+def parse_adif_file(filename, settings : Settings):
     """
     Parse an ADIF file and return a list of contacts
     

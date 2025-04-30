@@ -19,6 +19,7 @@ class Settings:
         self.DEFAULT_MAP_TYPE = "HYBRID"  # ROADMAP, SATELLITE, HYBRID, or TERRAIN
         self.AUTO_OPEN_MAP = True
         self.OPERATOR_GRIDSQUARE = ""  # Optional: can be set if not found in ADIF
+        self.IS_WSPR = False
         
         # Load settings from file if it exists
         self.load_settings()

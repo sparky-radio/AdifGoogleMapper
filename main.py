@@ -9,6 +9,7 @@ import datetime
 import sys
 import os
 from adif_parser import parse_adif_file
+from wspr_parser import parse_wspr_file
 from grid_converter import grid_to_coordinates
 from maps_interface import create_map
 from settings import Settings
@@ -17,16 +18,7 @@ def main():
     """Main entry point for the application"""
 
     parser = argparse.ArgumentParser()
-    try:
-        parser.add_argument("--adi", help="the ADI file name and location")
-        parser.add_argument("--start", type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(), help="the start date Y-M-D")
-        parser.add_argument("--end", type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(), help="the end date Y-M-D")
-        # parser.add_argument("--band", help="the band: all, 10,12,15,20,30...")
-        args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
-        
-    except: # calling help will call SystemExit, we can catch this instead
-        parser.print_help
-        sys.exit(0)
+    args = parse_args(parser)
     
     settings = Settings()
     
@@ -36,24 +28,21 @@ def main():
     if args.end:
         settings.end_date = args.end
 
+    is_wspr = False
     
     # Check if adif file is provided as argument
     if args.adi:
-        adif_file = args.adi
-    else:
-        adif_file = settings.DEFAULT_ADIF_FILE
-    
-    if not os.path.exists(adif_file):
-        print(f"Error: ADIF file not found: {adif_file}")
-        return
-    
-    print(f"Processing ADIF file: {adif_file}")
-    
-    # Parse the ADIF file
-    contacts = parse_adif_file(adif_file, settings)
+        contacts = parse_adif_file(args, settings)
+
+    if args.wspr:
+        is_wspr = True
+        contacts = do_wspr_processing(args, settings)
     
     if not contacts:
-        print("No contacts found in the ADIF file.")
+        if is_wspr :
+            print("No contacts found in the WSPR file.")
+        else :
+            print("No contacts found in the ADIF file.")
         return
     
     print(f"Found {len(contacts)} contacts")
@@ -77,6 +66,10 @@ def main():
     valid_contacts = []
     
     for contact in contacts:
+        if contact['GRIDSQUARE'] and contact['LATITUDE'] and contact['LONGITUDE'] :
+            valid_contacts.append(contact)
+            continue
+
         # Copy the contact to avoid modifying the original
         processed_contact = contact.copy()
         
@@ -109,6 +102,46 @@ def main():
     
     print(f"Map created: {html_file}")
     print(f"Open {html_file} in your web browser to view your contacts")
+
+def parse_args(parser) :
+    try:
+        parser.add_argument("--adi", help="the ADI file name and location")
+        parser.add_argument("--wspr", help="the WSPR text file name and location")
+        parser.add_argument("--start", type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(), help="the start date Y-M-D")
+        parser.add_argument("--end", type=lambda d: datetime.datetime.strptime(d, '%Y-%m-%d').date(), help="the end date Y-M-D")
+        # parser.add_argument("--band", help="the band: all, 10,12,15,20,30...")
+        args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
+        return args
+        
+    except: # calling help will call SystemExit, we can catch this instead
+        parser.print_help
+        sys.exit(0)
+
+def do_adi_processing(args, settings : Settings) :
+    adif_file = args.adi
+    
+    if not os.path.exists(adif_file):
+        print(f"Error: ADIF file not found: {adif_file}")
+        return None
+    
+    print(f"Processing ADIF file: {adif_file}")
+    
+    # Parse the ADIF file
+    contacts = parse_adif_file(adif_file, settings)
+    return contacts
+
+def do_wspr_processing(args, settings : Settings) :
+    wspr_file = args.wspr
+    
+    if not os.path.exists(wspr_file):
+        print(f"Error: WSPR file not found: {wspr_file}")
+        return None
+    
+    print(f"Processing ADIF file: {wspr_file}")
+    
+    # Parse the WSPR file
+    contacts = parse_wspr_file(wspr_file, settings)
+    return contacts
 
 if __name__ == "__main__":
     main()
