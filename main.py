@@ -32,7 +32,7 @@ def main():
     
     # Check if adif file is provided as argument
     if args.adi:
-        contacts = parse_adif_file(args, settings)
+        contacts = do_adi_processing(args, settings)
 
     if args.wspr:
         is_wspr = True
@@ -66,7 +66,7 @@ def main():
     valid_contacts = []
     
     for contact in contacts:
-        if contact['GRIDSQUARE'] and contact['LATITUDE'] and contact['LONGITUDE'] :
+        if args.wspr and contact['GRIDSQUARE'] and contact['LATITUDE'] and contact['LONGITUDE'] :
             valid_contacts.append(contact)
             continue
 
